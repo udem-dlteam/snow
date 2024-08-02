@@ -1,0 +1,57 @@
+Currently the generic Snow framework implementation supports these
+Scheme systems:
+
+  Bigloo, Chez Scheme, Chicken, Gambit, Gauche, Guile, Kawa,
+  Larceny, MIT-Scheme, MzSscheme, Scheme48, SCM, Scsh, SISC, STklos
+
+Here is a prioritized list of improvements and extensions of the
+Snow framework:
+
+1) Improve support for the Scheme systems:
+
+   - Chez-Scheme and SCM support is almost complete, but the TCP/IP
+     functionality is not implemented.
+
+   - Scsh support is almost complete, but the TCP/IP functionality is
+     broken.  This error message is generated when creating a
+     connexion:
+
+     Error: client socket already connected
+            "www.iro.umontreal.ca"
+            80
+
+   - Scheme48 cannot access the command-line arguments of the script
+     directly, so the command-line arguments are passed using
+     environment variables.
+               
+   - Scheme48 doesn't support evaluation of an expression from the
+     command-line.  To work around this the expression to evaluate is
+     passed in as the standard-input for evaluation by the Scheme48
+     REPL.  Unfortunately this means that the script can't read the
+     standard-input and the output will contain the Scheme48 banner
+     and other noise.  There's got to be a better way.
+
+   - Snowman is really slow when run with Gauche.  Why?
+
+   - MIT-Scheme's macro expansion algorithm has problems.
+
+2) Add support for other Scheme Systems:
+
+   - RScheme anyone?
+
+   - Stalin does not have an interpreter.  Scripts would have to
+     be compiled, but this is not yet possible.
+
+3) Extend the functionality of the current packages.  In particular
+   filesys.scm, hostos.scm, tcpip.scm, and digest.scm could easily
+   be extended.  The hard part is porting to all the supported Scheme
+   systems.  This requires reading the reference manuals for the
+   Scheme systems and determining which features exist on all (or
+   almost all) systems.  Tests have to be added to test.scm .
+
+4) Add a documentation standard to the Snow framework, and document
+   the existing packages.
+
+5) Add more self-tests to the existing packages.
+
+6) Write new packages!  Of course, portable as much as possible.

@@ -1,0 +1,157 @@
+html, body {
+	margin: 0;
+	padding: 0;
+	color: #000000;
+	background: #ffffff;
+}
+
+body {
+	font: 80%/135% "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif;
+	padding: 0 0 10px 0;
+	min-width: 90px;
+}
+
+#wrap {
+	margin: 0 auto;
+}
+
+#main {
+	font: 125% "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif;
+	clear: both;
+	margin: 20px 20px;
+}
+
+/* CSS for the tabs starts here */
+#header {
+	margin-left: 110px;
+	height: 187px;
+	background: url(snow-header.gif) 0 0 no-repeat;
+}
+
+#nav {
+	margin-left: 110px;
+	float: left;
+	margin-top: -19px;
+	font-size: 0.94em;
+	line-height: 1em;
+}
+
+#nav ul {
+	margin: 0;
+	padding: 0 0 0 28px;
+	list-style: none;
+}
+
+#nav li {
+	float: left;
+	margin: 0 0 0 -1px;
+	padding: 0 0 0 6px;
+	background: url(snow-nav1.gif) 0 100% no-repeat;
+}
+
+#nav li:hover {
+	background-position: -6px 100%;
+}
+
+#nav a {
+	float: left;
+	display: block;
+	color: #473215;
+	font-weight: bold;
+	font-family: Georgia,Times,"Times New Roman",serif;
+	background: url(snow-nav2.gif) 100% 100% no-repeat;
+	padding: 5px 14px 12px 8px;
+	text-decoration: none;
+}
+
+#nav li:hover a {
+	background-image: url(snow-nav1.gif);
+}
+
+#nav a:hover {
+	color: #000;
+	text-decoration: underline;
+}
+
+#selt1 #nav #t1,
+#selt2 #nav #t2,
+#selt3 #nav #t3,
+#selt4 #nav #t4,
+#selt5 #nav #t5,
+#selt6 #nav #t6,
+#selt7 #nav #t7,
+#selt8 #nav #t8 {
+	background-position: -12px 100%;
+	padding-left: 26px;
+	margin: 0 2px 0 1px;
+}
+
+#selt1 #nav #t1 a,
+#selt2 #nav #t2 a,
+#selt3 #nav #t3 a,
+#selt4 #nav #t4 a,
+#selt5 #nav #t5 a,
+#selt6 #nav #t6 a,
+#selt7 #nav #t7 a,
+#selt8 #nav #t8 a {
+	background-image: url(snow-nav2s.gif);
+	padding-left: 0;
+	padding-right: 19px;
+}
+
+#nav #t1,
+#selt1 #nav #t1 {
+	margin-left: 0;
+}
+
+#nav #t6,
+#selt6 #nav #t6 {
+	margin-right: 0;
+}
+
+table {
+	font-size: 90%;
+	font-family: "trebuchet ms", "lucidia grande", verdana, arial, sans-serif;
+	line-height: 1.2em;
+	border-collapse: collapse;
+	text-align: left;
+	letter-spacing: .1em;
+}
+
+caption {
+	padding-top: .8em;
+	padding-bottom: .3em;
+	text-align: left;
+	font-size: 1.4em;
+	font-weight: normal;
+	text-transform: uppercase;
+	letter-spacing: .6em;
+	background: transparent;
+}
+
+thead th, tfoot th, tfoot td {
+	font-family: arial, verdana, sans-serif;
+	border-right: 1px solid #fff;
+	padding-left: 5px;
+	font-variant: small-caps;
+	letter-spacing: 0.1em;
+	color: #ffffff;
+	background: #6495ed;
+}
+
+.odd {
+	background: #D9ECFF;
+}
+
+.even {
+	background: #BDDFFF;
+}
+
+tbody tr:hover {
+	background: #FFDEAD;
+}
+
+tbody tr td:first-child {
+	font-family: courier-bold, sans-serif;
+	font-size: 1em;
+}

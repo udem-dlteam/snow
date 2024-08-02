@@ -1,0 +1,2 @@
+#!/bin/sh
+exec @SNOW_SITE_ROOT@/current/bin/snowfort "$@"

@@ -1,0 +1,691 @@
+#!/bin/sh
+
+#==============================================================================
+
+# File: "configure", Time-stamp: <2008-03-12 17:12:52 feeley>
+
+# Copyright (c) 2006-2008 by Marc Feeley, All Rights Reserved.
+
+#==============================================================================
+
+SNOW_VERSION="v1.1.2"
+
+# Extract the --site-root=XXX and --user-root=XXX and --host=XXX
+# and --install-hosts=yes-or-no command line options.
+
+find_in_path() # exe-name, sets `$exe'
+{
+  save_IFS="${IFS}"; IFS=":"
+  for dir in $PATH; do
+    if test -x "$dir/$1" -a ! -d "$dir/$1"; then
+      exe="$dir/$1"; IFS="$save_IFS"; return 0
+    fi
+  done
+  exe=""; IFS="$save_IFS"; return 1
+}
+
+if find_in_path "snow"; then
+  if [ "x`snow --config | sed -e /SNOW_VERSION=v1.0/p -e d`" = "x" ]; then
+    # new interface for Snow configuration information
+    eval `$exe --config`
+    site_root="$CONF_SNOW_SITE_ROOT"
+    user_root="$CONF_SNOW_USER_ROOT"
+    host="$CONF_SNOW_HOST"
+  else
+    # deprecated interface for Snow configuration information
+    eval `snow --config | sed -e 's/=/_CONF="/' -e 's/$/";/'`
+    site_root="$SNOW_SITE_ROOT_CONF"
+    user_root="$SNOW_USER_ROOT_CONF"
+    host="$SNOW_HOST_CONF"
+  fi
+fi
+
+if [ "x$site_root" = "x" ]; then
+  site_root="/usr/share/snow"
+fi
+
+if [ "x$user_root" = "x" ]; then
+  user_root=".snow"
+fi
+
+install_hosts=no
+
+while [ "$#" -gt "0" ]; do
+  arg="`echo \"$1\" | sed -e 's&^--site-root=\(.*\)$&\1&'`"
+  if [ "$arg" != "$1" ]; then
+    site_root="$arg"
+  else
+    arg="`echo \"$1\" | sed -e 's&^--user-root=\(.*\)$&\1&'`"
+    if [ "$arg" != "$1" ]; then
+      user_root="$arg"
+    else
+      arg="`echo \"$1\" | sed -e 's&^--host=\(.*\)$&\1&'`"
+      if [ "$arg" != "$1" ]; then
+        host="$arg"
+      else
+        arg="`echo \"$1\" | sed -e 's&^--install-hosts=\(.*\)$&\1&'`"
+        if [ "$arg" != "$1" ]; then
+          install_hosts="$arg"
+        else
+          echo "Unknown configure option \"$1\""
+          exit 1
+        fi
+      fi
+    fi
+  fi
+  shift
+done
+
+site_dir="$site_root/$SNOW_VERSION"
+
+#------------------------------------------------------------------------------
+# Search for the Scheme systems accessible on the system.
+
+# The code for detecting the Scheme systems has been contributed
+# by Eli Barzilay, December 2006.  Please report any bugs directly
+# to him at eli@barzilay.org and to the Scheme Now! maintainers.
+
+#------------------------------------------------------------------------------
+# Configuration
+
+# TODO: command-line argument for these
+verbose="no" # yes/no/very
+show_symbols="n"
+show_names="y"
+show_versions="y"
+show_paths="y"
+
+#------------------------------------------------------------------------------
+# Helpers
+
+exit_error()
+{
+  echo "$@" 1>&2
+  exit 1
+}
+
+maybe_printf()
+{
+  if [ "$verbose" != "no" ]; then
+    printf "$@"
+  fi
+}
+
+not_in() # name, set_of_names
+{
+  name="$1"
+  set_of_names="$2"
+  set x $set_of_names; shift
+  for i
+  do
+    if [ "$i" = "$name" ]; then return 1; fi
+  done
+  return 0
+}
+
+NL='
+'
+
+t() # sym, keyword: arg ...
+{
+  # a convenient interface to test_system: `sym' is the symbolic
+  # identifier that identifies the system; additional arguments are
+  # provided as `-key' keywords:
+  # -label the human label that the system is known as; defaults to
+  #        `Foo' if the sym is `foo', and `Foo compiler' if the sym is
+  #        `foo_comp'
+  # -exe   the executable name, defaults to the sym
+  # -flags flags that should be passed on to the executable; defaults
+  #        to nothing
+  # -input input line that should be sent to the executable; defaults
+  #        to nothing (which will use /dev/null)
+  # -rx    the expected sed regexp which will be matched against the
+  #        output of the executable (newlines converted to spaces),
+  #        with `???' (three question marks) appearing (exactly once)
+  #        where the version string is expected; this argument is
+  #        required
+  # -vrx   the expected version string regexp which will be used where
+  #        the above has `???'; defaults to `[0-9][0-9A-Za-z.]+'
+  sym="$1"; shift
+  human=""
+  exe=""
+  flags=""
+  input=""
+  rx=""
+  vrx="[0-9][0-9A-Za-z.]*"
+  while true; do
+    case "$1" in
+      "" ) break ;;
+      "-label" ) human="$2" ; shift 2 ;;
+      "-exe"   ) exe="$2"   ; shift 2 ;;
+      "-flags" ) flags="$2" ; shift 2 ;;
+      "-input" ) input="$2" ; shift 2 ;;
+      "-rx"    ) rx="$2"    ; shift 2 ;;
+      "-vrx"   ) vrx="$2"   ; shift 2 ;;
+      * ) exit_error "t: Unexpected argument: \"$1\"" ;;
+    esac
+  done
+  if [ "x$human" = "x" ]; then
+    human="`echo \"$sym\" | cut -c -1 | tr 'a-z' 'A-Z'`"
+    human="${human}`echo \"$sym\" | cut -c 2-`"
+    human="`echo \"$human\" | sed -e 's/_comp$/ compiler/'`"
+  fi
+  if [ "x$exe" = "x" ]; then exe="$sym"; fi
+  if [ "x$rx" = "x" ]; then
+    exit_error "t: no -rx specified"
+  else
+    rx1="`echo \"$rx\" | sed -e 's/???.*$//'`"
+    rx2="`echo \"$rx\" | sed -e 's/^.*???//'`"
+    rx="${rx1}"'\('"$vrx"'\)'"${rx2}"
+  fi
+  if not_in "$sym" "$ALL_SYSTEMS"; then
+    ALL_SYSTEMS="$ALL_SYSTEMS $sym"
+  fi
+  # run the test
+  if not_in "$sym" "$SYSTEMS_FOUND" && find_in_path "$exe"; then
+    if [ "$verbose" = "very" ]; then echo "... trying $exe"; fi
+    if [ "x$input" = "x" ]; then
+      out="`\"$exe\" $flags < /dev/null 2>&1`"
+    else
+      out="`echo \"$input\" | \"$exe\" $flags 2>&1`"
+    fi
+    # add some prefix text so if there's a version match then the sed result is
+    # always going to be different (for limited sed's with no way to `else
+    # delete the whole thing')
+    out="output: `echo \"$out\" | tr \"$NL\" \" \"`"
+    ver="`echo \"$out\" | sed -e 's&^.*'\"$rx\"'.*$&\1&'`"
+    if [ "x$ver" != "x$out" ]; then
+      if [ "$verbose" != "no" ]; then p="  ";
+      else p=""; fi
+      if [ "$show_versions" = "y" ]; then lbl="$human $ver";
+      else lbl="$human"; fi
+      case "$show_symbols$show_names$show_paths" in
+        yyy ) printf "  $p%-14s %-22s -> %s\n" "[$sym]" "$lbl" "$exe" ;;
+        yyn ) printf "  $p%-14s %s\n" "[$sym]" "$lbl" ;;
+        yny ) printf "  $p%-14s %s\n" "$sym:" "$exe" ;;
+        ynn ) printf "  $p%s\n" "$sym" ;;
+        nyy ) printf "  $p%-22s -> %s\n" "$lbl" "$exe" ;;
+        nyn ) printf "  $p%s\n" "$lbl" ;;
+        nny ) printf "  $p%s\n" "$exe" ;;
+        nnn ) : ;;
+        * ) exit_error "t: bad printout settings" ;;
+      esac
+      SYSTEMS_FOUND="$SYSTEMS_FOUND $sym"
+      eval "PROGRAM_$sym='$exe'"
+      eval "VERSION_$sym='$ver'"
+    fi
+  fi
+}
+
+search_systems()
+{
+  echo "Searching for the Scheme systems accessible in the current PATH:"
+
+  # Iterate through a known list of Scheme systems:
+
+  SYSTEMS_FOUND=""
+  ALL_SYSTEMS=""
+
+  t bigloo -rx "[Bb]igloo (???)"
+
+  t_chez() {
+    t chez -label "Chez Scheme" -rx "[Vv]ersion ???" "$@"
+  }
+  t_chez -exe "chez-scheme"
+  t_chez -exe "scheme"
+
+  t chicken -exe "csi" -rx "[Vv]ersion ???"
+  t chicken_comp -exe "csc" -flags "-version" -rx "[Vv]ersion ???"
+
+  t_gambit() {
+    sym="gambit"; if [ "$1" = "comp" ]; then sym="${sym}_$1"; shift; fi
+    t "$sym" -flags "-:d-" -input ",q" -rx "Gambit v???"  -vrx "[0-9][0-9A-Za-z.+]*\( beta [0-9][0-9]*\)*" "$@"
+  }
+  t_gambit      -exe "gsi"
+  t_gambit comp -exe "gambit-gsc"
+  t_gambit comp -exe "gsc"
+
+  t gauche -exe "gosh" -flags "-V" -rx "[Vv]ersion ???"
+
+  t_guile() {
+    t guile -exe "guile$1" -flags "-v" -rx "[Gg]uile ??? Copy"
+  }
+  t_guile ""
+  t_guile "-1.7"
+  t_guile "-1.6"
+  t_guile "-1.5"
+  t_guile "-1.4"
+
+  t kawa -flags "--version" -rx "[Kk]awa ???"
+
+  t larceny -rx "[Ll]arceny v???"
+
+  t_mit() {
+    t mit -label "MIT Scheme" -exe "$1" \
+          -rx "[Rr]elease ???" -vrx "[0-9][0-9A-Za-z.+]*"
+  }
+  t_mit "mit-scheme"
+  t_mit "scheme"
+
+  t mzscheme -label "MzScheme" -flags "-qv" -rx "[Vv]ersion ???,"
+
+  t petite -label "Petite Chez Scheme" -rx "[Vv]ersion ???"
+
+  t rscheme -exe "rs" -rx "RScheme (v???,"
+
+  t scheme48 -input ",exit" -rx "[Ss]cheme 48 ???"
+
+  t scm -label "SCM" -flags "--version" -rx "scm ???"
+
+  t scsh -input ",exit" -rx "[Ss]csh ???"
+
+  t sisc -label "SISC" -rx "SISC (???"
+
+  t stalin -rx "???"
+
+  t stklos -label "STklos" -flags "--version" -rx "[Vv]ersion ???"
+
+  SYSTEMS_NOT_FOUND=""
+
+  for sym in $ALL_SYSTEMS; do
+    if not_in "$sym" "$SYSTEMS_FOUND"; then
+      SYSTEMS_NOT_FOUND="$SYSTEMS_NOT_FOUND $sym"
+    fi
+  done
+}
+
+#------------------------------------------------------------------------------
+# Give installation information for Scheme systems that were not found.
+
+give_installation_info()
+{
+  URL_bigloo="http://www-sop.inria.fr/mimosa/fp/Bigloo"
+  URL_chez="http://www.scheme.com"
+  URL_chicken="http://www.call-with-current-continuation.org"
+  URL_gambit="http://www.iro.umontreal.ca/~gambit"
+  URL_gauche="http://www.shiro.dreamhost.com/scheme/gauche"
+  URL_guile="http://www.gnu.org/software/guile"
+  URL_kawa="http://www.gnu.org/software/kawa"
+  URL_larceny="http://www.ccs.neu.edu/home/will/Larceny"
+  URL_mit="http://www.gnu.org/software/mit-scheme"
+  URL_mzscheme="http://www.plt-scheme.org/software/mzscheme"
+  URL_petite="http://www.scheme.com"
+  URL_rscheme="http://www.rscheme.org"
+  URL_scheme48="http://s48.org"
+  URL_scm="http://www-swiss.ai.mit.edu/~jaffer/SCM.html"
+  URL_scsh="http://www.scsh.net"
+  URL_sisc="http://sisc.sourceforge.net"
+  URL_stalin="http://en.wikipedia.org/wiki/Stalin_Scheme_compiler"
+  URL_stklos="http://www.stklos.org"
+
+  if [ "x$SYSTEMS_NOT_FOUND" != "x" ]; then
+    echo
+    echo "These systems were not found (you might want to check the URL to install them):"
+    for sym in $SYSTEMS_NOT_FOUND; do
+      eval "url=\"\$URL_$sym\""
+      printf "  %-10s -> %s\n" "$sym" "$url"
+    done
+  fi
+}
+
+#------------------------------------------------------------------------------
+# Check the version numbers to do a quick filtering of Scheme system
+# versions that are known not to work.
+
+split_version() # version, sets `$ver1', `$ver2', and `$ver3'
+{
+  ver0="`echo \"$1\" | sed -e 's& beta &.&'`"
+  ver1="`echo \"$ver0\".. | sed -e 's&\([0-9]\)\([a-zA-Z]\)&\1.\2&g' -e 's&\([a-zA-Z]\)\([0-9]\)&\1.\2&g' -e 's&\([^.]*\)\.\([^.]*\)\.\([^.]*\).*&\1&'`"
+  ver2="`echo \"$ver0\".. | sed -e 's&\([0-9]\)\([a-zA-Z]\)&\1.\2&g' -e 's&\([a-zA-Z]\)\([0-9]\)&\1.\2&g' -e 's&\([^.]*\)\.\([^.]*\)\.\([^.]*\).*&\2&'`"
+  ver3="`echo \"$ver0\".. | sed -e 's&\([0-9]\)\([a-zA-Z]\)&\1.\2&g' -e 's&\([a-zA-Z]\)\([0-9]\)&\1.\2&g' -e 's&\([^.]*\)\.\([^.]*\)\.\([^.]*\).*&\3&'`"
+}
+
+compare_versions() # sym, min_version
+{
+  # compare the version of the system `sym' with `min_version'.
+
+  split_version "$2"
+  min_ver1="$ver1"
+  min_ver2="$ver2"
+  min_ver3="$ver3"
+
+  eval "ver=\"\$VERSION_$1\""
+  split_version "$ver"
+
+  compat=1
+
+  if [ "x$ver1" != "x" ]; then
+
+    if [ "$ver1" \< "A" ]; then
+      if [ "$ver1" -lt "$min_ver1" ]; then
+        compat=0
+      fi
+    else
+      if [ "$ver1" \< "$min_ver1" ]; then
+        compat=0
+      fi
+    fi
+    if [ "$compat" = "1" ]; then
+      if [ "x$ver1" = "x$min_ver1" ]; then
+        if [ "x$min_ver2" != "x" ]; then
+          if [ "x$ver2" = "x" ]; then
+            compat=0
+          else
+            if [ "$ver2" \< "A" ]; then
+              if [ "$ver2" -lt "$min_ver2" ]; then
+                compat=0
+              fi
+            else
+              if [ "$ver2" \< "$min_ver2" ]; then
+                compat=0
+              fi
+            fi
+            if [ "$compat" = "1" ]; then
+              if [ "x$ver2" = "x$min_ver2" ]; then
+                if [ "x$min_ver3" != "x" ]; then
+                  if [ "x$ver3" = "x" ]; then
+                    compat=0
+                  else
+                    if [ "$ver3" \< "A" ]; then
+                      if [ "$ver3" -lt "$min_ver3" ]; then
+                        compat=0
+                      fi
+                    else
+                      if [ "$ver3" \< "$min_ver3" ]; then
+                        compat=0
+                      fi
+                    fi
+                  fi
+                fi
+              fi
+            fi
+          fi
+        fi
+      fi
+    fi
+
+  fi
+}
+
+check_min_version() # sym, min_version, keyword: arg ...
+{
+  # checks that the version of the system is acceptable: `sym' is the
+  # symbolic identifier that identifies the system; min_version is the
+  # oldest acceptable version; additional arguments are provided as
+  # `-key' keywords:
+  # -label the human label that the system is known as; defaults to
+  #        `Foo' if the sym is `foo', and `Foo compiler' if the sym is
+  #        `foo_comp'
+
+  sym="$1"; shift
+  min_ver="$1"; shift
+  human=""
+
+  while true; do
+    case "$1" in
+      "" ) break ;;
+      "-label" ) human="$2" ; shift 2 ;;
+      * ) exit_error "check_version: Unexpected argument: \"$1\"" ;;
+    esac
+  done
+
+  if [ "x$human" = "x" ]; then
+    human="`echo \"$sym\" | cut -c -1 | tr 'a-z' 'A-Z'`"
+    human="${human}`echo \"$sym\" | cut -c 2-`"
+    human="`echo \"$human\" | sed -e 's/_comp$/ compiler/'`"
+  fi
+
+  compare_versions "$sym" "$min_ver"
+
+  if [ "x$ver1" = "x" ]; then
+    MISSING_SCHEME_SYSTEMS="$MISSING_SCHEME_SYSTEMS $sym"
+  else
+    if [ "$compat" != "1" ]; then
+      if [ "$min_ver1" = "9999" ]; then
+        echo "*** $human is not supported"
+      else
+        echo "*** $human $ver is not supported (need at least version $min_ver)"
+        MISSING_SCHEME_SYSTEMS="$MISSING_SCHEME_SYSTEMS $sym"
+      fi
+    else
+      SCHEME_SYSTEMS="$SCHEME_SYSTEMS $sym"
+    fi
+  fi
+}
+
+check_versions()
+{
+  SCHEME_SYSTEMS=""
+  MISSING_SCHEME_SYSTEMS=""
+
+  check_min_version bigloo 3.0
+  check_min_version chez 7.2 -label "Chez Scheme"
+  check_min_version chicken 2.608
+  check_min_version gambit "4.0.0"
+  check_min_version gauche 0.8.7
+  check_min_version guile 1.6.7
+  check_min_version kawa 1.9.2
+  check_min_version larceny 0.94
+  check_min_version mit 7.7.90 -label "MIT Scheme"
+  check_min_version mzscheme 352 -label "MzScheme"
+  check_min_version petite 7.0 -label "Petite Chez Scheme"
+  check_min_version rscheme 9999
+  check_min_version scheme48 1.4
+  check_min_version scm 5e3 -label "SCM"
+  check_min_version scsh 0.6.7
+  check_min_version sisc 1.16.6 -label "SISC"
+  check_min_version stalin 9999
+  check_min_version stklos 0.82 -label "STklos"
+}
+
+#------------------------------------------------------------------------------
+# Download and install missing Scheme systems.
+
+download_file() # query, outfile
+{
+  server="$snowfort_server"
+  doc="$snowfort_doc?$1"
+  outfile="$2"
+  echo "Downloading http://$server$doc"
+  if [ "x$PROGRAM_curl" != "x" ]; then
+    "$PROGRAM_curl" -s "http://$server$doc" > "$outfile"
+  else
+    if [ "x$PROGRAM_wget" != "x" ]; then
+      "$PROGRAM_wget" -q -O - "http://$server$doc" > "$outfile"
+    else
+      echo "GET $doc" | "$PROGRAM_nc" "$server" 80 > "$outfile"
+    fi
+  fi
+}
+
+get_package_list()
+{
+  if [ ! -e "package-list" ]; then
+    echo
+    download_file "operation=list" package-list
+  fi
+}
+
+install_host_system() # host
+{
+  get_package_list
+  host="host-$1"
+  latest_ver=`sed -n '/^("'$host'" (package\* '$host'\/\(v[0-9.]*\).*/s//\1/p' package-list`
+  if [ "x$latest_ver" != "x" ]; then
+    pkg="host-$1/$latest_ver"
+    pkg_file=`echo "$pkg" | sed -e "s&/&-&" -e "s&\.&_&g"`.tgz
+    echo
+    echo -------------------------------------- Installing "$pkg_file"
+    download_file "operation=download&pkg=$pkg" "$pkg_file"
+    gunzip -c "$pkg_file" | tar xf -
+    (cd "$pkg/snow" && chmod +x install-script.sh && SNOW_INSTALL_DIR="$site_dir" ./install-script.sh)
+    rm -rf "$pkg" "$pkg_file"
+  fi
+}
+
+install_missing_systems()
+{
+  snowfort_server="snow.iro.umontreal.ca"
+  snowfort_doc="/"
+
+  if find_in_path "curl"; then
+    PROGRAM_curl="$exe"
+  else
+    if find_in_path "wget"; then
+      PROGRAM_wget="$exe"
+    else
+      PROGRAM_nc="/usr/bin/nc"
+    fi
+  fi
+
+  rm -f package-list
+  ./mkidirs "$site_dir/bin"
+  ./mkidirs "$site_dir/host"
+
+  for sym in $MISSING_SCHEME_SYSTEMS; do
+    install_host_system "$sym"
+  done
+
+  echo
+}
+
+#------------------------------------------------------------------------------
+# Actually run the Scheme systems to test which ones are suitable for
+# Scheme Now!.
+
+create_files ()
+{
+  cat > configure.sed <<EOF
+s,@SNOW_SITE_ROOT@,${SNOW_SITE_ROOT:-"/usr/share/snow"},g
+s,@SNOW_USER_ROOT@,${SNOW_USER_ROOT:-".snow"},g
+s,@SNOW_VERSION@,${SNOW_VERSION:-"v0.0.0"},g
+s,@SNOW_HOST@,${SNOW_HOST:-"gambit"},g
+s,@ALL_SNOW_HOSTS@,${ALL_SNOW_HOSTS:-"bigloo chez chicken gambit gauche guile kawa mzscheme petite scheme48 scm scsh stklos"},g
+s,@PROGRAM_bigloo@,${PROGRAM_bigloo:-"bigloo"},g
+s,@PROGRAM_chez@,${PROGRAM_chez:-"chez-scheme"},g
+s,@PROGRAM_chicken@,${PROGRAM_chicken:-"csi"},g
+s,@PROGRAM_chicken_comp@,${PROGRAM_chicken_comp:-"csc"},g
+s,@PROGRAM_gambit@,${PROGRAM_gambit:-"gsi"},g
+s,@PROGRAM_gambit_comp@,${PROGRAM_gambit_comp:-"gsc"},g
+s,@PROGRAM_gauche@,${PROGRAM_gauche:-"gosh"},g
+s,@PROGRAM_guile@,${PROGRAM_guile:-"guile-1.6"},g
+s,@PROGRAM_kawa@,${PROGRAM_kawa:-"kawa"},g
+s,@PROGRAM_larceny@,${PROGRAM_larceny:-"larceny"},g
+s,@PROGRAM_mit@,${PROGRAM_mit:-"mit-scheme"},g
+s,@PROGRAM_mzscheme@,${PROGRAM_mzscheme:-"mzscheme"},g
+s,@PROGRAM_petite@,${PROGRAM_petite:-"petite"},g
+s,@PROGRAM_rscheme@,${PROGRAM_rscheme:-"rs"},g
+s,@PROGRAM_scheme48@,${PROGRAM_scheme48:-"scheme48"},g
+s,@PROGRAM_scm@,${PROGRAM_scm:-"scm"},g
+s,@PROGRAM_scsh@,${PROGRAM_scsh:-"scsh"},g
+s,@PROGRAM_sisc@,${PROGRAM_sisc:-"sisc"},g
+s,@PROGRAM_stalin@,${PROGRAM_stalin:-"stalin"},g
+s,@PROGRAM_stklos@,${PROGRAM_stklos:-"stklos"},g
+EOF
+
+  sed -f configure.sed < makefile.in > makefile
+  sed -f configure.sed < bin/snow.in > bin/snow
+  sed -f configure.sed < bin/snowman.in > bin/snowman
+  sed -f configure.sed < bin/snowfort.in > bin/snowfort
+  sed -f configure.sed < bin/index.cgi.in > bin/index.cgi
+  sed -f configure.sed < base/snow.scm.in > base/snow.scm
+
+  chmod 755 bin/snow
+  chmod 755 bin/snowman
+  chmod 755 bin/snowfort
+  chmod 755 bin/index.cgi
+
+  rm -f configure.sed
+}
+
+#------------------------------------------------------------------------------
+
+PATH="bin:$site_dir/bin:$PATH"
+
+if [ "x$install_hosts" != "xno" ]; then
+  search_systems
+  check_versions
+  install_missing_systems
+fi
+
+search_systems
+give_installation_info
+check_versions
+
+SNOW_SITE_ROOT=".."
+SNOW_USER_ROOT=".snow"
+ALL_SNOW_HOSTS="$SCHEME_SYSTEMS"
+
+echo
+echo "Testing the Scheme systems:"
+
+create_files
+
+passed_hosts=""
+
+for HOST in $SCHEME_SYSTEMS ; do
+  echo "----------------------------------------------- testing $HOST"
+  PATH=bin:$PATH SNOW_SITE_DIR=. SNOW_HOST=$HOST ./test.scm
+  if [ "$?" = "0" ]; then
+    passed_hosts="$passed_hosts $HOST"
+    echo "$HOST has passed the self test"
+  else
+    echo "$HOST has ***failed*** the self test"
+  fi
+done
+
+echo "-----------------------------------------------"
+
+SNOW_HOST=""
+
+rm -f makefile bin/snow base/snow.scm
+
+echo
+
+if [ "x$passed_hosts" = "x" ]; then
+
+  echo "*** None of the installed Scheme systems support Scheme Now!"
+  echo "*** Consequently, the Scheme Now! framework can't be installed."
+  echo "*** You might want to install a Scheme system, add it to your"
+  echo "*** PATH, and then run the configure script again."
+
+else
+
+  SNOW_SITE_ROOT="$site_root"
+  SNOW_USER_ROOT="$user_root"
+  ALL_SNOW_HOSTS="$passed_hosts"
+
+  echo "The following installed Scheme systems support Scheme Now!:"
+  for sym in $ALL_SNOW_HOSTS; do
+    echo "  $sym"
+  done
+
+  echo
+
+  if [ "x$host" != "x" ]; then
+    SNOW_HOST="$host"
+  else
+    SNOW_HOST=""
+  fi
+
+  while not_in "$SNOW_HOST" "$ALL_SNOW_HOSTS" ; do
+    printf "Please choose the default Scheme host system: "
+    read SNOW_HOST
+  done
+
+  echo
+  echo "Configuring files for these defaults:"
+  echo
+  echo "SNOW_SITE_DIR  = $SNOW_SITE_ROOT/$SNOW_VERSION"
+  echo "SNOW_USER_DIR  = \$HOME/$SNOW_USER_ROOT/$SNOW_VERSION"
+  echo "ALL_SNOW_HOSTS =$ALL_SNOW_HOSTS"
+  echo "SNOW_HOST      = $SNOW_HOST"
+
+  create_files
+
+  echo
+  echo "To install the Scheme Now! framework type: \"make install\""
+
+fi
+
+#==============================================================================

@@ -1,0 +1,33 @@
+":";SNOW_DEBUG= SNOW_TEST= SNOW_PATH= SNOW_USER_ROOT= SNOW_SITE_ROOT= SNOW_USER_DIR= SNOW_SITE_DIR= SNOW_PATH_GLOBAL= exec @SNOW_SITE_ROOT@/current/bin/snow -- "$0" "$@"
+
+;;;============================================================================
+
+;;; File: "snowman", Time-stamp: <2007-04-04 17:31:52 feeley>
+
+;;; Copyright (c) 2006-2007 by Marc Feeley, All Rights Reserved.
+
+;;;============================================================================
+
+(package* snowman/v1.0.0
+
+ (maintainer:
+  "Scheme Now! <snow at iro.umontreal.ca>")
+
+ (author:
+  "Marc Feeley <feeley at iro.umontreal.ca>")
+
+ (homepage:
+  "http://snow.iro.umontreal.ca")
+
+ (description:
+  "Application startup for generic Snow package management utility.")
+
+ (keywords: snow)
+
+ (license: lgpl/v2.1)
+
+ (require: snowman-app/v1))
+
+(snowman-main)
+
+;;;============================================================================

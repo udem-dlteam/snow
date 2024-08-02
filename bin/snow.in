@@ -1,0 +1,322 @@
+#!/bin/sh
+
+#==============================================================================
+
+# File: "snow", Time-stamp: <2007-09-03 20:54:21 feeley>
+
+# Copyright (c) 2006-2007 by Marc Feeley, All Rights Reserved.
+
+#==============================================================================
+
+# The call to the "snow" script normally occurs on the first line
+# of a Scheme Now! script.  The content of the first line should be
+# exactly as follows:
+#
+#    ":";exec snow -- "$0" "$@"
+
+#==============================================================================
+
+# Set the root directory of the site-wide Scheme Now! installation.
+
+SNOW_SITE_DIR=${SNOW_SITE_DIR:-"@SNOW_SITE_ROOT@/@SNOW_VERSION@"}
+SNOW_BASE="${SNOW_SITE_DIR}/base"
+SNOW_MACROS="${SNOW_BASE}/snow.scm"
+
+# Set the default Scheme system to use (one of: bigloo, chez, chicken,
+# chicken-sc, gambit, gambit-sc, gauche, guile, kawa, larceny, mit,
+# mzscheme, petite, rscheme, scheme48, scm, scsh, sisc, stalin, stklos,
+# or all).
+
+SNOW_HOST=${SNOW_HOST:-"@SNOW_HOST@"}
+
+# Set the Scheme systems supported by Scheme Now! (this is useful for
+# the "all" fictitious Scheme system, which will run the script with
+# all these systems, a very convenient means to test the portability
+# of a Scheme Now! script).
+
+ALL_SNOW_HOSTS=${ALL_SNOW_HOSTS:-"@ALL_SNOW_HOSTS@"}
+
+# Default location of the Scheme implementations:
+
+PROGRAM_bigloo=${PROGRAM_bigloo:-"@PROGRAM_bigloo@"}
+PROGRAM_chez=${PROGRAM_chez:-"@PROGRAM_chez@"}
+PROGRAM_chicken=${PROGRAM_chicken:-"@PROGRAM_chicken@"}
+PROGRAM_chicken_comp=${PROGRAM_chicken_comp:-"@PROGRAM_chicken_comp@"}
+PROGRAM_gambit=${PROGRAM_gambit:-"@PROGRAM_gambit@"}
+PROGRAM_gambit_comp=${PROGRAM_gambit_comp:-"@PROGRAM_gambit_comp@"}
+PROGRAM_gauche=${PROGRAM_gauche:-"@PROGRAM_gauche@"}
+PROGRAM_guile=${PROGRAM_guile:-"@PROGRAM_guile@"}
+PROGRAM_kawa=${PROGRAM_kawa:-"@PROGRAM_kawa@"}
+PROGRAM_larceny=${PROGRAM_larceny:-"@PROGRAM_larceny@"}
+PROGRAM_mit=${PROGRAM_mit:-"@PROGRAM_mit@"}
+PROGRAM_mzscheme=${PROGRAM_mzscheme:-"@PROGRAM_mzscheme@"}
+PROGRAM_petite=${PROGRAM_petite:-"@PROGRAM_petite@"}
+PROGRAM_rscheme=${PROGRAM_rscheme:-"@PROGRAM_rscheme@"}
+PROGRAM_scheme48=${PROGRAM_scheme48:-"@PROGRAM_scheme48@"}
+PROGRAM_scm=${PROGRAM_scm:-"@PROGRAM_scm@"}
+PROGRAM_scsh=${PROGRAM_scsh:-"@PROGRAM_scsh@"}
+PROGRAM_sisc=${PROGRAM_sisc:-"@PROGRAM_sisc@"}
+PROGRAM_stalin=${PROGRAM_stalin:-"@PROGRAM_stalin@"}
+PROGRAM_stklos=${PROGRAM_stklos:-"@PROGRAM_stklos@"}
+
+if [ "$1" = "--config" ] ; then
+
+  # Set configuration settings.
+
+  CONF_SNOW_SITE_ROOT="@SNOW_SITE_ROOT@"
+  CONF_SNOW_USER_ROOT="@SNOW_USER_ROOT@"
+  CONF_SNOW_VERSION="@SNOW_VERSION@"
+  CONF_SNOW_HOST="@SNOW_HOST@"
+  CONF_ALL_SNOW_HOSTS="@ALL_SNOW_HOSTS@"
+  CONF_PROGRAM_bigloo="@PROGRAM_bigloo@"
+  CONF_PROGRAM_chez="@PROGRAM_chez@"
+  CONF_PROGRAM_chicken="@PROGRAM_chicken@"
+  CONF_PROGRAM_chicken_comp="@PROGRAM_chicken_comp@"
+  CONF_PROGRAM_gambit="@PROGRAM_gambit@"
+  CONF_PROGRAM_gambit_comp="@PROGRAM_gambit_comp@"
+  CONF_PROGRAM_gauche="@PROGRAM_gauche@"
+  CONF_PROGRAM_guile="@PROGRAM_guile@"
+  CONF_PROGRAM_kawa="@PROGRAM_kawa@"
+  CONF_PROGRAM_larceny="@PROGRAM_larceny@"
+  CONF_PROGRAM_mit="@PROGRAM_mit@"
+  CONF_PROGRAM_mzscheme="@PROGRAM_mzscheme@"
+  CONF_PROGRAM_petite="@PROGRAM_petite@"
+  CONF_PROGRAM_rscheme="@PROGRAM_rscheme@"
+  CONF_PROGRAM_scheme48="@PROGRAM_scheme48@"
+  CONF_PROGRAM_scm="@PROGRAM_scm@"
+  CONF_PROGRAM_scsh="@PROGRAM_scsh@"
+  CONF_PROGRAM_sisc="@PROGRAM_sisc@"
+  CONF_PROGRAM_stalin="@PROGRAM_stalin@"
+  CONF_PROGRAM_stklos="@PROGRAM_stklos@"
+
+  echo 'CONF_SNOW_SITE_ROOT="'${CONF_SNOW_SITE_ROOT}'"'
+  echo 'CONF_SNOW_USER_ROOT="'${CONF_SNOW_USER_ROOT}'"'
+  echo 'CONF_SNOW_VERSION="'${CONF_SNOW_VERSION}'"'
+  echo 'CONF_SNOW_HOST="'${CONF_SNOW_HOST}'"'
+  echo 'CONF_ALL_SNOW_HOSTS="'${CONF_ALL_SNOW_HOSTS}'"'
+  echo 'CONF_PROGRAM_bigloo="'${CONF_PROGRAM_bigloo}'"'
+  echo 'CONF_PROGRAM_chez="'${CONF_PROGRAM_chez}'"'
+  echo 'CONF_PROGRAM_chicken="'${CONF_PROGRAM_chicken}'"'
+  echo 'CONF_PROGRAM_chicken_comp="'${CONF_PROGRAM_chicken_comp}'"'
+  echo 'CONF_PROGRAM_gambit="'${CONF_PROGRAM_gambit}'"'
+  echo 'CONF_PROGRAM_gambit_comp="'${CONF_PROGRAM_gambit_comp}'"'
+  echo 'CONF_PROGRAM_gauche="'${CONF_PROGRAM_gauche}'"'
+  echo 'CONF_PROGRAM_guile="'${CONF_PROGRAM_guile}'"'
+  echo 'CONF_PROGRAM_kawa="'${CONF_PROGRAM_kawa}'"'
+  echo 'CONF_PROGRAM_larceny="'${CONF_PROGRAM_larceny}'"'
+  echo 'CONF_PROGRAM_mit="'${CONF_PROGRAM_mit}'"'
+  echo 'CONF_PROGRAM_mzscheme="'${CONF_PROGRAM_mzscheme}'"'
+  echo 'CONF_PROGRAM_petite="'${CONF_PROGRAM_petite}'"'
+  echo 'CONF_PROGRAM_rscheme="'${CONF_PROGRAM_rscheme}'"'
+  echo 'CONF_PROGRAM_scheme48="'${CONF_PROGRAM_scheme48}'"'
+  echo 'CONF_PROGRAM_scm="'${CONF_PROGRAM_scm}'"'
+  echo 'CONF_PROGRAM_scsh="'${CONF_PROGRAM_scsh}'"'
+  echo 'CONF_PROGRAM_sisc="'${CONF_PROGRAM_sisc}'"'
+  echo 'CONF_PROGRAM_stalin="'${CONF_PROGRAM_stalin}'"'
+  echo 'CONF_PROGRAM_stklos="'${CONF_PROGRAM_stklos}'"'
+  exit 0
+fi
+
+if [ "$1" = "--compile" ] ; then
+
+  snow_file="$2"
+  snow_file_no_ext="`echo "$snow_file" | sed -e 's/\.[^.]*$//'`"
+
+  case ${SNOW_HOST} in
+
+         bigloo) ;;
+
+           chez) ;;
+
+        chicken) "${PROGRAM_chicken_comp}" -dynamic -extend "${SNOW_BASE}/compat-chicken.scm" -prelude '(begin (include "'${SNOW_MACROS}'") (include*-cd "'${snow_file}'"))' "${snow_file}"
+                 ;;
+
+     chicken-sc) "${PROGRAM_chicken_comp}" -R syntax-case -dynamic -extend "${SNOW_BASE}/compat-chicken.scm" -prelude '(begin (include "'${SNOW_MACROS}'") (include*-cd "'${snow_file}'"))' "${snow_file}"
+                 ;;
+
+         gambit) "${PROGRAM_gambit_comp}" -prelude '(begin (include "'${SNOW_MACROS}'") (include*-cd "'${snow_file}'"))' "${snow_file}"
+                 ;;
+
+      gambit-sc) "${PROGRAM_gambit_comp}" -prelude '(begin (include "'${SNOW_MACROS}'") (include*-cd "'${snow_file}'"))' -e '(load "~~/syntax-case")' "${snow_file}"
+                 ;;
+
+         gauche) ;;
+
+          guile) ;;
+
+           kawa) ;;
+
+        larceny) exec "${PROGRAM_larceny}" -nobanner -- -e '(quote (begin (load-print #t) (load-verbose #t)))' -e "'(require (quote twobit-pass-times))" -e '(begin (define include load) (issue-warnings #f) (herald #f) (include "'"${SNOW_BASE}"'/compat-larceny.scm") (include "'"${SNOW_MACROS}"'") (global-optimization #f))' -e '(begin (compile-file "'"${snow_file}"'") (exit))'
+                 ;;
+
+            mit) exec "${PROGRAM_mit}" --compiler --heap 15000 --constant 100 --stack 100 --batch-mode --eval '(begin (define include load) (set! load/suppress-loading-message? #t) (include "'"${SNOW_BASE}"'/compat-mit.scm") (include "'"${SNOW_MACROS}"'"))' --eval '(begin (compile-file "'"${snow_file}"'" (list) (the-environment)) (%exit))' < /dev/null
+                 ;;
+
+       mzscheme) ;;
+
+         petite) ;;
+
+        rscheme) ;;
+
+       scheme48) ;;
+
+            scm) ;;
+
+           scsh) ;;
+
+           sisc) # SISC compilation is broken...
+                 # exec "${PROGRAM_sisc}" --no-repl "${SNOW_BASE}/compat-sisc.scm" "${SNOW_MACROS}" --call-with-args _snow:compile-package -- "$@"
+                 ;;
+
+         stalin) ;;
+
+         stklos) exec "${PROGRAM_stklos}" -e '(begin (compiler:time-display #f) (compiler:warn-use-undefined-postpone #f) (include "'${SNOW_MACROS}'") (include*-cd "'${snow_file}'") (compile-file "'${snow_file}'" "'${snow_file_no_ext}'.ostk"))'
+                 ;;
+
+            all) for HOST in ${ALL_SNOW_HOSTS} ; do
+                   SNOW_HOST=${HOST} "$0" "$@"
+                 done
+                 ;;
+
+  esac
+
+  exit 0
+
+fi
+
+# Get script arguments.
+
+while [ "$#" -gt "0" -a "$1" != "--" ] ; do
+  shift
+done
+
+if [ "$#" = "0" ] ; then
+  exit 1
+fi
+
+shift
+
+# First argument is script to execute, others are script's arguments:
+
+SCRIPT_FILE="$1"
+shift
+
+# Invoke Scheme system so that it executes the script:
+
+# WARNING: if you change the command line arguments used to invoke the
+# Scheme system then the procedure snow-command-line may return the
+# wrong result.  Adjust the definition of snow-command-line in
+# _hostos.scm accordingly.
+
+case ${SNOW_HOST} in
+
+       bigloo) exec "${PROGRAM_bigloo}" -s -eval '(define snow #f) (define include load) (include "'"${SNOW_MACROS}"'") (load-program* "'"${SCRIPT_FILE}"'") (exit)' "$@"
+               ;;
+
+         chez) SNOW_MACROS="${SNOW_MACROS}" SNOW_SCRIPT_FILE="${SCRIPT_FILE}" exec "${PROGRAM_chez}" --script "${SNOW_BASE}/compat-chez.scm" "$@"
+               ;;
+
+      chicken) exec "${PROGRAM_chicken}" -e '(begin (include "'"${SNOW_BASE}"'/compat-chicken.scm") (include "'"${SNOW_MACROS}"'") (load-program* "'"${SCRIPT_FILE}"'") (exit))' -- "$@"
+               ;;
+
+   chicken-sc) exec "${PROGRAM_chicken}" -R syntax-case -e '(begin (include "'"${SNOW_BASE}"'/compat-chicken.scm") (include "'"${SNOW_MACROS}"'") (load-program* "'"${SCRIPT_FILE}"'") (exit))' -- "$@"
+               ;;
+
+       gambit) exec "${PROGRAM_gambit}" -:d- -e '(begin (include "'"${SNOW_MACROS}"'") (load-program* "'"${SCRIPT_FILE}"'") (exit))' "$@"
+               ;;
+
+    gambit-sc) exec "${PROGRAM_gambit}" -:d- -e '(load "~~/syntax-case")' -e '(begin (include "'"${SNOW_MACROS}"'") (load-program* "'"${SCRIPT_FILE}"'") (exit))' "$@"
+               ;;
+
+       gauche) exec "${PROGRAM_gauche}" -b -e '(begin (set! *load-path* (cons "'"${SNOW_BASE}"'" *load-path*)) (define include load) (include "'"${SNOW_MACROS}"'"))' -e '(begin (load-program* "'"${SCRIPT_FILE}"'") (exit))' -- "${SCRIPT_FILE}" "$@"
+               ;;
+
+        guile) exec "${PROGRAM_guile}" -c '(define include load) (include "'"${SNOW_MACROS}"'") (load-program* "'"${SCRIPT_FILE}"'")' "$@"
+               ;;
+
+         kawa) exec "${PROGRAM_kawa}" -e '(begin (define include load) (include "'"${SNOW_BASE}"'/compat-kawa.scm") (include "'"${SNOW_MACROS}"'"))' -e '(begin (load-program* "'"${SCRIPT_FILE}"'") (exit))' "$@"
+               ;;
+
+      larceny) # A hack: arguments prior to the -- token as runtime options.
+               # Arguments preceded by -e after the -- token are evaluated
+               # directly; other arguments are interpreted as files to load.
+               # If evaluation of an expression exits, then Larceny will not
+               # interpret further command line arguments.  Therefore we can
+               # pass arbitrary tokens (like -snow-args) after invoking exit;
+               # the hostos library extracts them from command-line-arguments
+               # parameter, using -snow-args as a marker of where they start.
+               exec "${PROGRAM_larceny}" -nobanner -- -e '(quote (begin (load-print #t) (load-verbose #t)))' -e "'(require (quote twobit-pass-times))" -e '(begin (define include load) (issue-warnings #f) (herald #f) (include "'"${SNOW_BASE}"'/compat-larceny.scm") (include "'"${SNOW_MACROS}"'") (global-optimization #f))' -e '(begin (load-program* "'"${SCRIPT_FILE}"'") (quote (pretty-print (twobit-pass-times))) (exit))' -snow-args "$@"
+               ;;
+
+          mit) # MIT-Scheme cannot access the command-line arguments of
+               # the script directly, so we pass the arguments using
+               # environment variables.
+               i=1
+               while [ "$#" -gt "0" ] ; do
+                 export SNOW_SCRIPT_ARG$i="$1"
+                 shift
+                 i=`expr $i + 1`
+               done
+               unset SNOW_SCRIPT_ARG$i
+               exec "${PROGRAM_mit}" --heap 15000 --batch-mode --eval '(begin (define include load) (set! load/suppress-loading-message? #t) (include "'"${SNOW_BASE}"'/compat-mit.scm") (include "'"${SNOW_MACROS}"'"))' --eval '(begin (load-program* "'"${SCRIPT_FILE}"'") (%exit))'
+               ;;
+
+     mzscheme) exec "${PROGRAM_mzscheme}" -m -e '(begin (define include load) (include "'"${SNOW_BASE}"'/compat-mzscheme.scm") (include "'"${SNOW_MACROS}"'"))' -e '(begin (load-program* "'"${SCRIPT_FILE}"'") (exit))' -- "$@"
+               ;;
+
+       petite) SNOW_MACROS="${SNOW_MACROS}" SNOW_SCRIPT_FILE="${SCRIPT_FILE}" exec "${PROGRAM_petite}" --script "${SNOW_BASE}/compat-chez.scm" "$@"
+               ;;
+
+      rscheme) # RScheme is not supported yet...
+               echo "RScheme not yet supported"
+               exit 1
+               ;;
+
+     scheme48) # Scheme48 cannot access the command-line arguments of
+               # the script directly, so we pass the arguments using
+               # environment variables.
+               i=1
+               while [ "$#" -gt "0" ] ; do
+                 export SNOW_SCRIPT_ARG$i="$1"
+                 shift
+                 i=`expr $i + 1`
+               done
+               unset SNOW_SCRIPT_ARG$i
+               # Scheme48 doesn't support evaluation of an expression
+               # from the command-line.  So we construct an expression
+               # to evaluate and pass it in as the standard-input for
+               # evaluation by the REPL.  Unfortunately this means that
+               # the script can't read the standard-input and the output
+               # will contain the Scheme48 banner and other noise.
+               printf ',open bitwise ascii byte-vectors posix c-system-function handle simple-signals simple-conditions sockets i/o evaluation pp big-scheme threads srfi-9 receiving\n(define load (let ((ld load)) (lambda (filename) (if (eqv? #\\# (with-input-from-file filename read-char)) (load-script-into filename (interaction-environment)) (ld filename))))) (define include load) (include "'"${SNOW_BASE}"'/compat-scheme48.scm") (include "'"${SNOW_MACROS}"'") (load-program* "'"${SCRIPT_FILE}"'") (exit 0)' | exec "${PROGRAM_scheme48}" -h 10000000
+               ;;
+
+          scm) exec "${PROGRAM_scm}" -q -c '(define include load) (load "'"${SNOW_BASE}"'/compat-scm.scm") (include "'"${SNOW_MACROS}"'") (load-program* "'"${SCRIPT_FILE}"'")' -- "$@"
+               ;;
+
+         scsh) exec "${PROGRAM_scsh}" -o bitwise -o ascii -o byte-vectors -o handle -o sockets -o i/o -o fluids -o pp -o big-scheme -o signals -o srfi-9 -o receiving -c '(begin (define load (let ((ld load)) (lambda (filename) (let-fluid $current-noise-port (make-null-output-port) (lambda () (ld filename)))))) (define include load) (load "'"${SNOW_BASE}"'/compat-scsh.scm") (include "'"${SNOW_MACROS}"'") (eval (quote (load-program* "'"${SCRIPT_FILE}"'")) (interaction-environment)) (exit))' "$@"
+               ;;
+
+         sisc) exec "${PROGRAM_sisc}" --no-repl "${SNOW_BASE}/compat-sisc.scm" "${SNOW_MACROS}" --call-with-args _snow:run-program -- "${SCRIPT_FILE}" "$@"
+               ;;
+
+       stalin) # Stalin does not have an interpreter...
+               echo "Stalin not yet supported"
+               exit 1
+               ;;
+
+       stklos) exec "${PROGRAM_stklos}" -e '(begin (include "'"${SNOW_MACROS}"'") (load-program* "'"${SCRIPT_FILE}"'") (exit))' -- "$@"
+               ;;
+
+          all) for HOST in ${ALL_SNOW_HOSTS} ; do
+
+                 echo ------------------------------------------------------------ ${HOST}
+
+                 SNOW_HOST=${HOST} "$0" -- "${SCRIPT_FILE}" "$@"
+
+               done
+               ;;
+
+esac
+
+#==============================================================================

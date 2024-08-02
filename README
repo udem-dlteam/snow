@@ -1,0 +1,13 @@
+Scheme Now! v1.1.2 (March 14, 2008)
+===================================
+
+The documentation and installation instructions are available on the
+Snow web site:
+
+   http://snow.iro.umontreal.ca
+
+Installation usually consists of these steps:
+
+   % ./configure --site-root=$HOME/.snow-site --install-hosts=yes
+   % make install
+   % export PATH="$HOME/.snow-site/current/bin:$PATH"
